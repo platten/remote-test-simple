@@ -1,0 +1,9 @@
+---
+configName: "simple ping"
+tests:
+  - testName: "ping host"
+    execString: "ping -c 1 $TARGET"
+  - testName: "check health endpoint"
+    execString: curl -k -v https://${TARGET}:8006/
+    # execString: 'curl -k -w "%{http_code}" https://${TARGET}:8443/healthz | grep 200'
+    # execString: 'curl -k -s -o /dev/null -w "%{http_code}" https://${TARGET}:8443/healthz | grep 200'
