@@ -1,0 +1,23 @@
+---
+configName: ""                    # Name of configuration file. Required.
+configPATH: "./plugins/:${PATH}"  # Provides config default search path, usually overridden in CLI. Default: "./plugins/:{PATH}"
+inheritENV: true                  # Should the parent process's environmental variables be inherited or not. If true 
+configENV: ""                     # List of space separated key value pairs for overridden environmental variables default "
+configCWD: "."                    # Config specific CWD
+configSHELL: "/bin/bash"          # Config wide setting for execution shell. 
+                                  #   - Can be overridden on the test by test basis. 
+                                  #   - Defaults to /bin/bash
+tests:
+  - testName: "ping host"     # Unique name. Required.
+    inheritENV: true          # Should the global config environmental variables be inherited or not. Default is true.
+    ENV: ""                   # Definition and/or override of environment variables. Default.
+    SHELL: ''                 # Test specific shell to be used for execution. Default is inherited shell.
+    CWD: ""                   # Test specific override for working directory
+    # Vars available in execstring:
+    # - All defined and/or inherited environmental variables, includes $SHELL, $CWD, etc.
+    # - TESTER_TARGET : Hostname/FQDN/IP address of target to test
+    execString: "$ping.sh -c ${HOSTNAME}" # String to execute in shell. Required. Example "ping -c 1 ${TESTER_TARGET}"
+  - testName: "check health endpoint"
+    envVar: "bob=something"
+    execString: 'curl -k -s -o /dev/null -w "%{http_code}" https://${HOSTNAME}:8443/healthz | grep 200'
+    stdinRef: "$HOSTNAME"
