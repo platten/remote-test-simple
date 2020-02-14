@@ -1,40 +1,49 @@
-#!/usr/bin/env python3
 
-import shlex
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Test runner.
+
+This script takes in a file with a list of host targets, and a YAML file with
+a list of tests to run against each one of the target hosts and then executes
+the tests. It will return 0 if all the tests passed or 1 if one of them failed.
+
+
+Todo:
+    * Process output from STDOUT from process goes to logger.info (STDOUT)
+    * Process output from STDERR from process goes to logger.error (STDERR)
+    * Support timeout
+    * Support config defaults (If not provided. Include PATH, ENV, SHELL, etc)
+    * Support test specific overrides (Path, ENV, etc)
+    * Support multiple configs
+    * Support mapping of configs to hosts
+
+.. _Google Python Style Guide:
+   http://google.github.io/styleguide/pyguide.html
+
+"""
+
 import argparse
 import os
-from subprocess import Popen, PIPE, STDOUT, check_output, getstatusoutput
 import copy
 import logging
-from bash import bash
-from io import StringIO
 import subprocess
-
 
 import yaml
 
-TIMEOUT = 60
-# FORMAT = '%(asctime)-15s %(clientip)s %(user)-8s %(message)s'
-# logging.basicConfig(format=FORMAT)
-
-# create logger
 logger = logging.getLogger('simple_example')
 logger.setLevel(logging.DEBUG)
-
-# create console handler and set level to debug
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
-
-# create formatter
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# add formatter to ch
 ch.setFormatter(formatter)
 
 
 def main():
-
+    """
+    Main.
+    """
+    # setup_logger()
     parser = argparse.ArgumentParser()
     parser.add_argument("target_file_path",
                         help="Path to file containing targets/hostnames")
@@ -49,119 +58,104 @@ def main():
     return 1
 
 
+# def setup_logger():
+#     """
+#     Configure logger.
+#     """
+#     logger = logging.getLogger('simple_example')
+#     logger.setLevel(logging.DEBUG)
+#     ch = logging.StreamHandler()
+#     ch.setLevel(logging.DEBUG)
+#     formatter = logging.Formatter(
+#         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#     ch.setFormatter(formatter)
+
+
 def return_config(config_path):
+    """Return Python object describing tests and execution parameters.
+
+    Args:
+        config_path (str): Path to the configuration file.
+
+    Returns:
+        dict: Dictionary containing configuration and list of tests.
+
+    """
     with open(config_path) as file:
         config = yaml.load(file, Loader=yaml.FullLoader)
     return config
 
 
 def return_targets(target_path):
+    """Return list of targets to scan.
+
+    Args:
+        target_path (str): Path to the target file.
+
+    Returns:
+        list: List containing target hosts.
+
+    """
     with open(target_path) as file:
         content = file.readlines()
     return [x.strip() for x in content]
 
-# Need to
-
 
 def run_tests(config, targets):
+    """Run tests defined in configuration on each one of the targets.
+
+    Args:
+        config (dict): Python dict containing configuration.
+        targets(list): List of host targets.
+
+    Returns:
+        bool: Whether the tests failed or passed for the targets provided.
+
+    """
     env = dict(os.environ)
     passed = True
     print("Config file: " + config["configName"] + "\n")
     for target in targets:
         print("\nRunning tests for target: " + target + "\n")
         for test in config["tests"]:
-            print("Running test " + test["testName"] +
-                  " for target: " + target + ": ", end="")
+            print("Running test " + test["testName"] + " for target: " +
+                  target + ": ",
+                  end="")
             # command = env["SHELL"] + " -c \"" + test["execString"] + "\""
             command = test["execString"]
             commandEnv = copy.copy(env)
             commandEnv["TARGET"] = target
 
             try:
-                process = subprocess.Popen(
-                    command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen(command,
+                                           shell=True,
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
                 output, errors = process.communicate()
+                print(output)
                 log_subprocess_output(output)
+                if process.returncode != 0:
+                    passed = False
             except (OSError, subprocess.CalledProcessError) as exception:
-                logging.info('Exception occured: ' + str(exception))
-                logging.info('Subprocess failed')
+                logger.info('Exception occured: ' + str(exception))
+                print('Exception occured: ' + str(exception))
+                logger.info('Subprocess failed')
                 return False
             else:
-                # no exception was raised
                 logging.info('Subprocess finished')
-            # response = run(command, commandEnv)
-            # if response != 0:
-            #     print("failed")
-            #     passed = False
-            # else:
-            #     print("passed")
-    return True
-
-
-# def run(cmd, env=os.environ, stdout=PIPE, stderr=STDOUT, timeout=TIMEOUT, **kwargs):
-#     print("running command: " + cmd)
-
-#     process = Popen(
-#         cmd, shell=True, stdout=stdout, stderr=stderr, env=env)
-#     status, output = getstatusoutput(cmd)
-#     logging.info(output)
-#     # with process.stdout:
-#     #     log_subprocess_output(process.stdout)
-#     # code = process.wait()
-#     return status
+    return passed
 
 
 def log_subprocess_output(pipe):
-    for line in iter(pipe.readline, b''):  # b'\n'-separated lines
-        logging.info('got line from subprocess: %r', line)
+    """Log output from pipe.
 
-# class ShellExec(object):
-#     """Intended to be used as a method."""
-
-#     def __init__(self, *args, **kwargs):
-#         self.p = None
-#         self.stdout = None
-#         self.run(*args, **kwargs)
-#         self.code = None
-#         self.stdout = None
-#         self.stderr = None
-
-#     def run(self, cmd, env=None, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=TIMEOUT, sync=True):
-#         self.p = subprocess.Popen(
-#             cmd, shell=True, stdout=stdout, stdin=subprocess.PIPE, stderr=stderr, env=env
-#         )
-
-#         if sync:
-#             self.sync(timeout)
-#         return self
-
-#     def sync(self, timeout=None):
-#         kwargs = {'input': self.stdout}
-#         if timeout:
-#             kwargs['timeout'] = timeout
-#         self.stdout, self.stderr = self.p.communicate(**kwargs)
-#         self.code = self.p.returncode
-#         return self
-
-#     def __repr__(self):
-#         return self.value()
-
-#     def __unicode__(self):
-#         return self.value()
-
-#     def __str__(self):
-#         return self.value()
-
-#     def __nonzero__(self):
-#         return self.__bool__()
-
-#     def __bool__(self):
-#         return bool(self.value())
-
-#     def value(self):
-#         if self.stdout:
-#             return self.stdout.strip().decode(encoding='UTF-8')
-#         return ''
+    Args:
+        pipe (subprocess.PIPE): PIPE object
+    """
+    new = pipe.decode('utf-8')
+    for line in new:  # b'\n'-separated lines
+        print('got line from subprocess: %r', line)
+        logger.info('got line from subprocess: %r', line)
 
 
 main()
