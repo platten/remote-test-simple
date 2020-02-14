@@ -2,6 +2,6 @@
 configName: "simple ping"
 tests:
   - name: "ping host"
-    execString: "ping -c 1 $TARGET"
+    execString: ping -c 1 $TARGET
   - name: "check health endpoint"
-    execString: curl -k -v https://${TARGET}:8006/
+    execString: curl -k -v https://${TARGET}:8006/ | grep Proxmox

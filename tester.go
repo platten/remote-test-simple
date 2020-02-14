@@ -16,9 +16,9 @@ import (
 )
 
 type testBlock struct {
-	Name         string
-	OsEnvEnabled bool   `yaml:"os_env,omitempty"`
-	ExecSTRING   string `yaml:"execString"`
+	Name          string
+	OsEnvDisabled bool   `yaml:"osEnvDisabled,omitempty"`
+	ExecSTRING    string `yaml:"execString"`
 }
 
 type testConfig struct {
@@ -36,8 +36,14 @@ func getCwd() string {
 
 func runCommand(test testBlock, host string, path string, verbose bool) error {
 	os.Chdir(filepath.Dir(path))
-	cmd := exec.Command("bash", "-l", "-c", test.ExecSTRING)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("TARGET=%s", host))
+	var cmd *exec.Cmd
+	if test.OsEnvDisabled == false {
+		cmd = exec.Command("bash", "-l", "-c", test.ExecSTRING)
+		cmd.Env = append(os.Environ(), fmt.Sprintf("TARGET=%s", host))
+	} else {
+		cmd = exec.Command("bash", "-c", test.ExecSTRING)
+		cmd.Env = []string{fmt.Sprintf("TARGET=%s", host)}
+	}
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
 
