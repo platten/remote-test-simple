@@ -1,0 +1,10 @@
+* Single test run against target
+* Targetset test for entire testconfig
+* Targetset test for single test
+* Updated execution engine with timeouts, retries and exec pool
+* Map / reduce
+* Default test config
+* Support test libraries
+* Ansible style inventories with mappings to tests
+* User configs for default tests and targetsets
+* Shell completion
